@@ -4,16 +4,13 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 class L1DistanceLayer(layers.Layer):
-    """Custom layer to compute L1 distance between two embeddings."""
     
     def __init__(self, **kwargs):
         super(L1DistanceLayer, self).__init__(**kwargs)
     
     def call(self, inputs):
         emb_a, emb_b = inputs
-        # Compute absolute difference
         diff = tf.abs(emb_a - emb_b)
-        # Sum over embedding dimension to get L1 distance
         distance = tf.reduce_sum(diff, axis=1, keepdims=True)
         return distance
     
@@ -45,7 +42,6 @@ class SignatureVerifier:
             raise
     
     def preprocess_signature(self, img_path, target_size=(220, 155)):
-        """Preprocess signature image for model input."""
         try:
             img = cv2.imread(img_path)
             if img is None:
@@ -59,33 +55,17 @@ class SignatureVerifier:
             raise
     
     def verify_signatures(self, sig1_path, sig2_path, threshold=0.5):
-        """
-        Compare two signatures and return distance, similarity, and decision.
-        
-        Returns:
-            dict: {
-                'distance': float,
-                'similarity': float (0-1, higher = more similar),
-                'decision': str,
-                'confidence': float
-            }
-        """
         try:
-            # Preprocess images
             sig1 = self.preprocess_signature(sig1_path)
             sig2 = self.preprocess_signature(sig2_path)
             
-            # Add batch dimension
             sig1 = np.expand_dims(sig1, axis=0)
             sig2 = np.expand_dims(sig2, axis=0)
             
-            # Predict distance
             distance = self.model.predict([sig1, sig2], verbose=0)[0][0]
             
-            # Make decision
             prediction = distance < threshold
 
-            # Calculate confidence (distance from threshold)
             confidence = abs(distance - threshold) / threshold
             confidence = min(1.0, confidence)
             
@@ -101,7 +81,6 @@ class SignatureVerifier:
             return None
     
     def batch_verify(self, signature_pairs, threshold=0.5):
-        """Verify multiple signature pairs at once."""
         results = []
         for sig1_path, sig2_path in signature_pairs:
             result = self.verify_signatures(sig1_path, sig2_path, threshold)

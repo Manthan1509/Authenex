@@ -16,7 +16,6 @@ async def verify_faces(
     threshold: float = 0.9
 ):
     try:
-        # Save uploaded files to temp locations
         tmp_dir = tempfile.mkdtemp()
         file1_path = os.path.join(tmp_dir, file1.filename)
         file2_path = os.path.join(tmp_dir, file2.filename)
@@ -42,7 +41,6 @@ async def verify_signatures(
     threshold: float = 0.5
 ):
     try:
-        # Save uploaded files temporarily
         tmp_dir = tempfile.mkdtemp()
         file1_path = os.path.join(tmp_dir, file1.filename)
         file2_path = os.path.join(tmp_dir, file2.filename)
@@ -52,7 +50,6 @@ async def verify_signatures(
         with open(file2_path, "wb") as f:
             shutil.copyfileobj(file2.file, f)
 
-        # Verify signatures
         result = verifier.verify_signatures(file1_path, file2_path, threshold=threshold)
 
         return result if result else {"error": "Verification failed"}
