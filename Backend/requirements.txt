@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+tensorflow-cpu
+opencv-python
+numpy
+keras-facenet
+python-multipart
+scipy

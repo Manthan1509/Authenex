@@ -1,0 +1,8 @@
+# model files
+*.keras
+*.h5
+*.pth
+*.pkl
+
+# environment variables
+*.env
