@@ -2,25 +2,27 @@ import cv2
 import pytesseract
 import re
 from dateutil.parser import parse as parse_date
+from fastapi import FastAPI, File, UploadFile
+import uvicorn
+import os
+import tempfile
 
-# Update path below if Tesseract is installed elsewhere
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Set Tesseract path (configurable via env var)
+tesseract_path = os.getenv("TESSERACT_PATH", r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+pytesseract.pytesseract.tesseract_cmd = tesseract_path
+
 
 def extract_text_from_image(image_path: str) -> str:
     """Extract text from certificate image using Tesseract OCR."""
     img = cv2.imread(image_path)
-
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
     _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-
     text = pytesseract.image_to_string(thresh)
     return text
 
 
 def parse_certificate_to_key_value(ocr_text: str) -> dict:
     """Parse OCR text into structured key-value pairs with robust rules."""
-
     lines = [line.strip() for line in ocr_text.splitlines() if line.strip()]
     normalized_lines = [re.sub(r'\s+', ' ', line) for line in lines]
     lower_lines = [line.lower() for line in normalized_lines]
@@ -34,7 +36,7 @@ def parse_certificate_to_key_value(ocr_text: str) -> dict:
         'registration_no': None
     }
 
-    for line in normalized_lines[:5]:  
+    for line in normalized_lines[:5]:
         if re.search(r'university|institute|college', line, re.IGNORECASE):
             data['university_name'] = line
             break
@@ -63,15 +65,16 @@ def parse_certificate_to_key_value(ocr_text: str) -> dict:
     if major_match:
         data['major'] = major_match.group(2).title()
 
-    reg_match = re.search(r'(Reg(istration)?\.?\s*No\.?|Roll\s*No\.?|Student\s*ID|Enroll(ment)?\.?\s*No\.?)\s*[:\-]?\s*([A-Z0-9\-\/]+)',
-                          ocr_text, re.IGNORECASE)
+    reg_match = re.search(
+        r'(Reg(istration)?\.?\s*No\.?|Roll\s*No\.?|Student\s*ID|Enroll(ment)?\.?\s*No\.?)\s*[:\-]?\s*([A-Z0-9\-\/]+)',
+        ocr_text, re.IGNORECASE)
     if reg_match:
         data['registration_no'] = reg_match.group(5).strip()
 
     date_patterns = [
-        r'(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',          # 12/09/2022 or 12-09-22
-        r'(\d{1,2}\s+[A-Za-z]+\s+\d{2,4})',              # 12 September 2022
-        r'([A-Za-z]+\s+\d{1,2},\s*\d{4})'                # September 12, 2022
+        r'(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
+        r'(\d{1,2}\s+[A-Za-z]+\s+\d{2,4})',
+        r'([A-Za-z]+\s+\d{1,2},\s*\d{4})'
     ]
     for pattern in date_patterns:
         match = re.search(pattern, ocr_text)
@@ -86,30 +89,20 @@ def parse_certificate_to_key_value(ocr_text: str) -> dict:
     return data
 
 
-from fastapi import FastAPI, File, UploadFile
-import uvicorn
-
 app = FastAPI()
+
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    content = await file.read()
-    # Process with model here
-    return {"status": "verified", "confidence": 0.93}
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
 
-if __name__ == "_main_":
+    ocr_text = extract_text_from_image(tmp_path)
+    parsed_data = parse_certificate_to_key_value(ocr_text)
+
+    return {"ocr_text": ocr_text, "parsed_data": parsed_data}
+
+
+if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)
-    
-# if __name__ == "__main__":
-#     image_path = "image copy.png"  
-#     ocr_text = extract_text_from_image(image_path)
-#     print("\n--- OCR Extracted Text ---\n")
-#     print(ocr_text)
-
-#     parsed_data = parse_certificate_to_key_value(ocr_text)
-#     print("\n--- Extracted Key-Value Pairs ---\n")
-#     for k, v in parsed_data.items():
-#         print(f"{k}: {v}")
-
-
-
