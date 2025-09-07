@@ -3,6 +3,11 @@
 *.h5
 *.pth
 *.pkl
+*.pt
 
 # environment variables
 *.env
+
+# python temp files/folders
+__pycache__
+.vscode

@@ -6,3 +6,15 @@ numpy
 keras-facenet
 python-multipart
 scipy
+pytesseract
+python-dateutil
+
+# langchain
+langchain
+langchain-core
+huggingface-hub
+langchain-huggingface
+
+ultralytics
+
+python-dotenv
