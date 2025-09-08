@@ -2,17 +2,29 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
 from Backend.src.photo_verifier import verify_photos
 from Backend.src.sign_verifier import SignatureVerifier
-from Backend.src.signature_extractor import crop_signatures
-from Backend.src.ocr import extract_certificate_info
+from Backend.src.certificate_parser import CertificateParser
+from pathlib import Path
 import tempfile
 import shutil
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+HF_API = os.getenv("HF_API_TOKEN")
+
 
 app = FastAPI(title="Photo Verification API")
 
-verifier = SignatureVerifier(model_path="Backend/models/signature_verification_model.keras")
-YOLO_MODEL_PATH = "/Backend/models/best.pt"
-SIGNATURE_OUTPUT_FOLDER = "./Authenex/cropped_signatures"
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+SIGNATURE_OUTPUT_FOLDER = BASE_DIR / "cropped_signature"
+SIGNATURE_OUTPUT_FOLDER = SIGNATURE_OUTPUT_FOLDER.as_posix()
+SIGN_PARSER_MODEL_PATH = "/Backend/models/sign_parser.pt"
+SIGN_VERIFIER_MODEL_PATH = "/Backend/models/sign_verifier.keras"
+
+verifier = SignatureVerifier(model_path=SIGN_VERIFIER_MODEL_PATH)
+parser = CertificateParser(SIGN_PARSER_MODEL_PATH, str(SIGNATURE_OUTPUT_FOLDER))
+
 
 @app.post("/verify-faces")
 async def verify_faces(
@@ -22,9 +34,11 @@ async def verify_faces(
 ):
     try:
         result = verify_photos(file1_path, file2_path, threshold=threshold)
-        return result if result else {"error": "Verification failed"}
+        if result:
+            return JSONResponse(content=result, status_code=200)
+        return JSONResponse(content={"error": "Verification failed"}, status_code=400)
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
 @app.post("/verify-signatures")
@@ -35,35 +49,25 @@ async def verify_signatures(
 ):
     try:
         result = verifier.verify_signatures(file1_path, file2_path, threshold=threshold)
-        return result if result else {"error": "Verification failed"}
+        if result:
+            return JSONResponse(content=result, status_code=200)
+        return JSONResponse(content={"error": "Verification failed"}, status_code=400)
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse(content={"error": str(e)}, status_code=500)
     
 
-@app.post("/process-certificate/")
-async def process_certificate(file: UploadFile = File(...)):
+@app.post("/parse-certificate/")
+async def parse_certificate(file: UploadFile = File(...)):
     try:
-        # Create temp directory for uploaded file
         tmp_dir = tempfile.mkdtemp()
         file_path = os.path.join(tmp_dir, file.filename)
 
-        # Save uploaded file
         with open(file_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
 
-        # Run OCR
-        ocr_result = extract_certificate_info(file_path)
+        result = parser.parse_certificate(file_path)
 
-        # Extract signatures
-        sig_paths = crop_signatures(file_path, YOLO_MODEL_PATH, SIGNATURE_OUTPUT_FOLDER)
-
-        response = {
-            "certificate_info": ocr_result,
-            "signature_folder": SIGNATURE_OUTPUT_FOLDER,
-            "signature_paths": sig_paths
-        }
-
-        return JSONResponse(content=response)
+        return JSONResponse(content=result, status_code=200)
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
