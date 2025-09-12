@@ -157,14 +157,4 @@ npm run build
 npm run preview
 ```
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch
-3. Make changes
-4. Test thoroughly
-5. Submit pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details
+ 
