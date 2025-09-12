@@ -18,12 +18,14 @@ app = FastAPI(title="Photo Verification API")
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 SIGNATURE_OUTPUT_FOLDER = BASE_DIR / "cropped_signature"
+PHOTO_OUTPUT_FOLDER = BASE_DIR / "cropped_photo"
+
 SIGNATURE_OUTPUT_FOLDER = SIGNATURE_OUTPUT_FOLDER.as_posix()
-SIGN_PARSER_MODEL_PATH = "/Backend/models/sign_parser.pt"
-SIGN_VERIFIER_MODEL_PATH = "/Backend/models/sign_verifier.keras"
+SIGN_PARSER_MODEL_PATH = BASE_DIR / "/Backend/models/sign_parser.pt"
+SIGN_VERIFIER_MODEL_PATH = BASE_DIR / "Backend/models/sign_verifier.keras"
 
 verifier = SignatureVerifier(model_path=SIGN_VERIFIER_MODEL_PATH)
-parser = CertificateParser(SIGN_PARSER_MODEL_PATH, str(SIGNATURE_OUTPUT_FOLDER))
+parser = CertificateParser(str(SIGNATURE_OUTPUT_FOLDER), str(PHOTO_OUTPUT_FOLDER))
 
 
 @app.post("/verify-faces")
