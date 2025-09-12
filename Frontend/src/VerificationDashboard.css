@@ -161,9 +161,78 @@ body, #root {
   font-weight: bold;
   cursor: pointer;
   transition: background 0.2s ease;
+  margin: 8px 0;
 }
 .verify-btn:hover {
   background: #4338ca;
+}
+.verify-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.button-group .verify-btn {
+  width: auto;
+  flex: 1;
+}
+
+.upload-section {
+  margin-bottom: 20px;
+}
+
+.divider {
+  text-align: center;
+  margin: 20px 0;
+  font-weight: bold;
+  color: #6b7280;
+}
+
+.result-section {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f3f4f6;
+  border-radius: 8px;
+}
+
+.result-display {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.status-item {
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.status-item.healthy {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-item.unhealthy {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 

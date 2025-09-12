@@ -13,3 +13,4 @@ res10_300x300_ssd_iter_140000.caffemodel
 # python temp files/folders
 __pycache__
 .vscode
+myenv

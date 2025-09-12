@@ -1,8 +1,26 @@
 import React, { useState } from 'react';
 import AutheLogo from '../assets/logo.png';
 
+// Simple i18n implementation
+const translations = {
+  en: {
+    home: "Home",
+    about: "About",
+    verifier: "Verifier",
+    institute: "Institute",
+    support: "Support",
+    services: "Services",
+    contact: "Contact"
+  }
+};
+
+const useTranslation = (lang = 'en') => {
+  return translations[lang] || translations.en;
+};
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const t = useTranslation();
 
 //   for smooth about scrooling
 const scrollToAbout = () => {
@@ -24,11 +42,11 @@ const scrollToAbout = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex space-x-13 text-[19px] font-bold">
-            <a href="#home" className="hover:text-yellow-400">Home</a>
-            <a onClick={scrollToAbout} className="hover:text-yellow-400 cursor-pointer">About</a>
-            <a href="#services" className="hover:text-yellow-400">Verifier</a>
-            <a href="#contact" className="hover:text-yellow-400">Institute</a>
-            <a href="#contact" className="hover:text-yellow-400">Support</a>
+            <a href="#home" className="hover:text-yellow-400">{t.home}</a>
+            <a onClick={scrollToAbout} className="hover:text-yellow-400 cursor-pointer">{t.about}</a>
+            <a href="#services" className="hover:text-yellow-400">{t.verifier}</a>
+            <a href="#contact" className="hover:text-yellow-400">{t.institute}</a>
+            <a href="#contact" className="hover:text-yellow-400">{t.support}</a>
           </div>
 
           {/* Mobile Hamburger */}
@@ -68,10 +86,10 @@ const scrollToAbout = () => {
       {/* Mobile Menu */}
       {isOpen && (
         <div className="md:hidden bg-gray-700 px-2 pt-2 pb-3 space-y-1">
-          <a href="#home" className="block px-3 py-2 rounded hover:bg-gray-600">Home</a>
-          <a href="#about" className="block px-3 py-2 rounded hover:bg-gray-600">About</a>
-          <a href="#services" className="block px-3 py-2 rounded hover:bg-gray-600">Services</a>
-          <a href="#contact" className="block px-3 py-2 rounded hover:bg-gray-600">Contact</a>
+          <a href="#home" className="block px-3 py-2 rounded hover:bg-gray-600">{t.home}</a>
+          <a href="#about" className="block px-3 py-2 rounded hover:bg-gray-600">{t.about}</a>
+          <a href="#services" className="block px-3 py-2 rounded hover:bg-gray-600">{t.services}</a>
+          <a href="#contact" className="block px-3 py-2 rounded hover:bg-gray-600">{t.contact}</a>
         </div>
       )}
     </nav>

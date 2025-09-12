@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 tensorflow-cpu
 opencv-python
 numpy
@@ -18,3 +18,25 @@ langchain-huggingface
 ultralytics
 
 python-dotenv
+
+# blockchain
+web3
+eth-abi
+eth-account
+eth-hash
+eth-keys
+eth-utils
+
+# security
+cryptography>=41.0.0
+bcrypt>=4.0.0
+passlib[bcrypt]
+pyjwt>=2.8.0
+
+# validation
+pydantic>=2.0.0
+email-validator
+
+# logging and monitoring
+structlog
+prometheus-client

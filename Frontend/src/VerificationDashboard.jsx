@@ -1,42 +1,100 @@
-import React from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  Legend,
-} from "recharts";
-import { FaHome, FaCheckCircle, FaCog } from "react-icons/fa"; // Correct Sidebar icons
+import React, { useState, useEffect } from "react";
+import { FaHome, FaCheckCircle, FaCog } from "react-icons/fa";
+import { api } from "./services/api";
 import "./VerificationDashboard.css";
 
+// Simple i18n implementation
+const translations = {
+  en: {
+    dashboard: "Dashboard",
+    verifications: "Verifications",
+    settings: "Settings",
+    totalVerifications: "Total Verifications",
+    verifiedToday: "Verified Today",
+    pending: "Pending",
+    rejected: "Rejected",
+    systemStatus: "System Status",
+    certificateOperations: "Certificate Operations",
+    uploadCertificate: "Upload Certificate (PDF/JPG)",
+    parseCertificate: "Parse Certificate",
+    storeOnBlockchain: "Store on Blockchain",
+    enterCertificateHash: "Enter Certificate Hash",
+    enterHolderName: "Enter Holder Name",
+    verifyByHash: "Verify by Hash",
+    processing: "Processing...",
+    result: "Result:"
+  }
+};
+
+const useTranslation = (lang = 'en') => {
+  return translations[lang] || translations.en;
+};
+
 const VerificationDashboard = () => {
-  // Dummy data
-  const lineData = [
-    { name: "Jan", verified: 40 },
-    { name: "Feb", verified: 30 },
-    { name: "Mar", verified: 50 },
-    { name: "Apr", verified: 70 },
-  ];
+  const [file, setFile] = useState(null);
+  const [certificateHash, setCertificateHash] = useState('');
+  const [holderName, setHolderName] = useState('');
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [healthStatus, setHealthStatus] = useState(null);
+  const t = useTranslation();
 
-  const barData = [
-    { name: "Certificates", verified: 200, rejected: 50 },
-    { name: "IDs", verified: 150, rejected: 40 },
-    { name: "Licenses", verified: 180, rejected: 30 },
-  ];
+  useEffect(() => {
+    checkHealth();
+  }, []);
 
-  const pieData = [
-    { name: "Verified", value: 70 },
-    { name: "Rejected", value: 30 },
-  ];
-  const COLORS = ["#4f46e5", "#f87171"];
+  const checkHealth = async () => {
+    try {
+      const health = await api.healthCheck();
+      setHealthStatus(health);
+    } catch (error) {
+      console.error('Health check failed:', error);
+    }
+  };
+
+  const handleFileUpload = (event) => {
+    setFile(event.target.files[0]);
+    setResult(null);
+  };
+
+  const handleParseCertificate = async () => {
+    if (!file) return;
+    
+    setLoading(true);
+    try {
+      const response = await api.parseCertificate(file);
+      setResult(response);
+    } catch (error) {
+      setResult({ error: 'Failed to parse certificate' });
+    }
+    setLoading(false);
+  };
+
+  const handleStoreCertificate = async () => {
+    if (!file) return;
+    
+    setLoading(true);
+    try {
+      const response = await api.storeCertificateBlockchain(file, '0x1234567890123456789012345678901234567890');
+      setResult(response);
+    } catch (error) {
+      setResult({ error: 'Failed to store certificate' });
+    }
+    setLoading(false);
+  };
+
+  const handleVerifyById = async () => {
+    if (!certificateHash) return;
+    
+    setLoading(true);
+    try {
+      const response = await api.getCertificateBlockchain(certificateHash);
+      setResult(response);
+    } catch (error) {
+      setResult({ error: 'Failed to verify certificate' });
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="dashboard-container">
@@ -45,13 +103,13 @@ const VerificationDashboard = () => {
         <h2>Authenex</h2>
         <ul>
           <li>
-            <FaHome /> Dashboard
+            <FaHome /> {t.dashboard}
           </li>
           <li>
-            <FaCheckCircle /> Verifications
+            <FaCheckCircle /> {t.verifications}
           </li>
           <li>
-            <FaCog /> Settings
+            <FaCog /> {t.settings}
           </li>
         </ul>
       </div>
@@ -61,92 +119,103 @@ const VerificationDashboard = () => {
         {/* Stats Section */}
         <div className="stats-grid">
           <div className="card">
-            <h3>Total Verifications</h3>
+            <h3>{t.totalVerifications}</h3>
             <p>1,230</p>
           </div>
           <div className="card">
-            <h3>Verified Today</h3>
+            <h3>{t.verifiedToday}</h3>
             <p>45</p>
           </div>
           <div className="card">
-            <h3>Pending</h3>
+            <h3>{t.pending}</h3>
             <p>120</p>
           </div>
           <div className="card">
-            <h3>Rejected</h3>
+            <h3>{t.rejected}</h3>
             <p>32</p>
           </div>
         </div>
 
-        {/* Charts Section */}
-        <div className="charts-grid">
-          <div className="chart-card">
-            <h3>Verification Trends</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={lineData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="verified" stroke="#4f46e5" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="chart-card">
-            <h3>Verification Status</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="chart-card">
-            <h3>Verification by Type</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={barData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="verified" fill="#4f46e5" />
-                <Bar dataKey="rejected" fill="#f87171" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* System Status */}
+        <div className="chart-card">
+          <h3>{t.systemStatus}</h3>
+          {healthStatus && (
+            <div className="status-grid">
+              <div className={`status-item ${healthStatus.status === 'healthy' ? 'healthy' : 'unhealthy'}`}>
+                API Status: {healthStatus.status}
+              </div>
+              <div className={`status-item ${healthStatus.blockchain_connected ? 'healthy' : 'unhealthy'}`}>
+                Blockchain: {healthStatus.blockchain_connected ? 'Connected' : 'Disconnected'}
+              </div>
+              <div className={`status-item ${healthStatus.ai_models_loaded?.certificate_parser ? 'healthy' : 'unhealthy'}`}>
+                AI Parser: {healthStatus.ai_models_loaded?.certificate_parser ? 'Loaded' : 'Mock'}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Verify Certificate Section */}
         <div className="verify-card">
-          <h3>Verify Certificate</h3>
-          <label className="upload-box">
-            Upload PDF / JPG
-            <input type="file" hidden />
-          </label>
-
-          <h3>OR</h3>
-
-          <div className="verify-inputs">
-            <input type="text" placeholder="Enter Certificate ID" />
-            <input type="text" placeholder="Enter Holder Name" />
+          <h3>{t.certificateOperations}</h3>
+          
+          <div className="upload-section">
+            <label className="upload-box">
+              {t.uploadCertificate}
+              <input type="file" onChange={handleFileUpload} accept=".pdf,.jpg,.jpeg,.png" />
+            </label>
+            {file && <p>Selected: {file.name}</p>}
+            
+            <div className="button-group">
+              <button 
+                className="verify-btn" 
+                onClick={handleParseCertificate}
+                disabled={!file || loading}
+              >
+                {t.parseCertificate}
+              </button>
+              <button 
+                className="verify-btn" 
+                onClick={handleStoreCertificate}
+                disabled={!file || loading}
+              >
+                {t.storeOnBlockchain}
+              </button>
+            </div>
           </div>
 
-          <button className="verify-btn">Verify</button>
+          <div className="divider">OR</div>
+
+          <div className="verify-inputs">
+            <input 
+              type="text" 
+              placeholder={t.enterCertificateHash}
+              value={certificateHash}
+              onChange={(e) => setCertificateHash(e.target.value)}
+            />
+            <input 
+              type="text" 
+              placeholder={t.enterHolderName}
+              value={holderName}
+              onChange={(e) => setHolderName(e.target.value)}
+            />
+            <button 
+              className="verify-btn" 
+              onClick={handleVerifyById}
+              disabled={!certificateHash || loading}
+            >
+              {loading ? t.processing : t.verifyByHash}
+            </button>
+          </div>
+
+          {/* Results */}
+          {result && (
+            <div className="result-section">
+              <h4>{t.result}</h4>
+              <pre className="result-display">
+                {JSON.stringify(result, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
     </div>

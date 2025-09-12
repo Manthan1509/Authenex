@@ -11,7 +11,10 @@ from dotenv import load_dotenv
 load_dotenv()
 HF_API = os.getenv("HF_API_TOKEN")
 
-pytesseract.pytesseract.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
+# Set Tesseract path from environment or use default
+tesseract_path = os.getenv('TESSERACT_CMD', 'C:/Program Files/Tesseract-OCR/tesseract.exe')
+if os.path.exists(tesseract_path):
+    pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
 
 class CertificateParser:
