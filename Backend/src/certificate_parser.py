@@ -15,14 +15,15 @@ pytesseract.pytesseract.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesserac
 
 
 class CertificateParser:
-    def __init__(self, yolo_model_path, signature_output_folder):
-        self.yolo_model_path = yolo_model_path
+    def __init__(self, signature_output_folder, photo_output_folder):
+        self.sign_parser_model_path = os.path.join("Backend", "models", "sign_parser.pt")
         self.signature_output_folder = signature_output_folder
+        self.photo_output_folder = photo_output_folder
 
         # Setup LLM
         llm = HuggingFaceEndpoint(
             model="meta-llama/Llama-3.3-70B-Instruct",  # or "google/gemma-2-2b-it"
-            huggingfacehub_api_token=HF_API,
+            huggingfacehub_api_token=str(HF_API),
             task="text-generation",
             temperature=0
         )
@@ -95,7 +96,7 @@ output format:
         if image is None:
             raise FileNotFoundError(f"Could not read the image at: {image_path}")
 
-        model = YOLO(self.yolo_model_path)
+        model = YOLO(self.sign_parser_model_path)
         results = model(image)
         cropped_paths = []
 
@@ -117,13 +118,67 @@ output format:
 
         return [p.replace("\\", "/") for p in cropped_paths] if cropped_paths else []
 
+    # ---------------- Photo Extraction ---------------- #
+    def crop_photo(self, image_path, student_name):
+        os.makedirs(self.photo_output_folder, exist_ok=True)
+
+        image = cv2.imread(image_path)
+        if image is None:
+            raise FileNotFoundError(f"Could not read the image at: {image_path}")
+
+        # Pretrained DNN face detector (make sure these files exist in Backend/models)
+        prototxt = os.path.join("Backend", "models", "deploy.prototxt")
+        model_file = os.path.join("Backend", "models", "res10_300x300_ssd_iter_140000.caffemodel")
+
+        net = cv2.dnn.readNetFromCaffe(prototxt, model_file)
+
+        (h, w) = image.shape[:2]
+        blob = cv2.dnn.blobFromImage(
+            cv2.resize(image, (300, 300)),
+            1.0,
+            (300, 300),
+            (104.0, 177.0, 123.0)
+        )
+
+        net.setInput(blob)
+        detections = net.forward()
+
+        if detections.shape[2] == 0:
+            return None  # No face found
+
+        # Select detection with highest confidence
+        max_conf_idx = detections[0, 0, :, 2].argmax()
+        confidence = detections[0, 0, max_conf_idx, 2]
+
+        # Extract bounding box
+        box = detections[0, 0, max_conf_idx, 3:7] * [w, h, w, h]
+        (x1, y1, x2, y2) = box.astype("int")
+
+        # Ensure coords are within bounds
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(w - 1, x2), min(h - 1, y2)
+
+        cropped = image[y1:y2, x1:x2]
+
+        student_name = student_name if student_name else "unknown"
+        student_name = student_name.replace(" ", "_").strip().lower()
+
+        cropped_name = f"{student_name}_photo.png"
+        cropped_path = os.path.join(self.photo_output_folder, cropped_name)
+        cv2.imwrite(cropped_path, cropped)
+
+        return cropped_path.replace("\\", "/")
+
+
     # ---------------- Combined ---------------- #
     def parse_certificate(self, image_path):
         ocr_result = self.extract_certificate_info(image_path)
         sig_paths = self.crop_signatures(image_path, ocr_result["student_name"])
+        photo_path = self.crop_photo(image_path, ocr_result["student_name"])
 
         return {
             "certificate_info": ocr_result,
             "signature_folder": self.signature_output_folder if sig_paths else None,
-            "signature_paths": sig_paths
+            "signature_paths": sig_paths,
+            "photo_path": photo_path
         }
