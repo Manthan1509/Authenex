@@ -8,6 +8,7 @@ python-multipart
 scipy
 pytesseract
 python-dateutil
+pillow
 
 # langchain
 langchain

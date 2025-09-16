@@ -8,6 +8,7 @@ try:
     from src.photo_verifier import verify_photos
     from src.sign_verifier import SignatureVerifier
     from src.certificate_parser import CertificateParser
+    from src.pixel_mismatch import analyze_for_edits
 except ImportError:
     from src.mock_services import mock_verify_photos as verify_photos
     from src.mock_services import MockSignatureVerifier as SignatureVerifier
@@ -72,27 +73,21 @@ cert_verification_service = CertificateVerificationService()
 # Legacy model initialization for backward compatibility
 BASE_DIR = Path(__file__).resolve().parents[1]
 SIGNATURE_OUTPUT_FOLDER = BASE_DIR / "cropped_signature"
-<<<<<<< HEAD
 PHOTO_OUTPUT_FOLDER = BASE_DIR / "cropped_photo"
 
 SIGNATURE_OUTPUT_FOLDER = SIGNATURE_OUTPUT_FOLDER.as_posix()
 SIGN_PARSER_MODEL_PATH = BASE_DIR / "/Backend/models/sign_parser.pt"
 SIGN_VERIFIER_MODEL_PATH = BASE_DIR / "Backend/models/sign_verifier.keras"
 
-verifier = SignatureVerifier(model_path=SIGN_VERIFIER_MODEL_PATH)
-parser = CertificateParser(str(SIGNATURE_OUTPUT_FOLDER), str(PHOTO_OUTPUT_FOLDER))
-=======
-SIGN_PARSER_MODEL_PATH = os.getenv('SIGN_PARSER_MODEL_PATH', str(BASE_DIR / "models" / "sign_parser.pt"))
-SIGN_VERIFIER_MODEL_PATH = os.getenv('SIGN_VERIFIER_MODEL_PATH', str(BASE_DIR / "models" / "sign_verifier.keras"))
+
 
 try:
     verifier = SignatureVerifier(model_path=SIGN_VERIFIER_MODEL_PATH)
-    parser = CertificateParser(SIGN_PARSER_MODEL_PATH, str(SIGNATURE_OUTPUT_FOLDER))
+    parser = CertificateParser(str(SIGNATURE_OUTPUT_FOLDER), str(PHOTO_OUTPUT_FOLDER))
 except Exception as e:
     print(f"Warning: Legacy models not loaded: {e}")
     verifier = None
     parser = None
->>>>>>> 755948e (Normalize line endings)
 
 
 @app.post("/verify-faces")
@@ -217,6 +212,36 @@ async def get_certificate_blockchain(certificate_hash: str):
         return JSONResponse(content=result, status_code=200)
     except Exception as e:
         return JSONResponse(content={"error": "Certificate not found"}, status_code=404)
+    
+
+@app.post("/certificate/analyze-edits")
+async def analyze_certificate_edits(file: UploadFile = File(...)):
+    """Analyze a certificate image for digital edits using Error Level Analysis (ELA)."""
+    if not validate_file(file):
+        raise HTTPException(status_code=400, detail="Invalid file type or size")
+
+    try:
+        tmp_dir = tempfile.mkdtemp()
+        safe_filename = sanitize_filename(file.filename)
+        file_path = os.path.join(tmp_dir, safe_filename)
+
+        file_content = await file.read()
+        if len(file_content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="File too large")
+
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+
+        result = analyze_for_edits(file_path)
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+
+        return JSONResponse(content=result, status_code=200)
+
+    finally:
+        if 'tmp_dir' in locals():
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
 
 
 @app.post("/certificate/verify-comprehensive")
